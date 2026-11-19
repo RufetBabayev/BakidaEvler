@@ -64,5 +64,5 @@ Python 3, `requests`. Mərhələ 3-dən sonra Supabase, GitHub Actions; mərhəl
 ## Mərhələ 3 qeydləri (Supabase + GitHub Actions)
 
 - Supabase layihəsi: `bakidaevler` (ref `zlxvaztepmprydphxmwu`). Cədvəllər: `elanlar`, `toplayici_veziyyet` (`toplayici/schema.sql`). RLS açıq, siyasət yoxdur; yalnız `service_role` açarı yazır.
-- GitHub repo: `RufetBabayev/BakidaEvler` (PRIVATE). İş axını: `.github/workflows/toplayici.yml`, hər 15 dəqiqə, yalnız Bakı vaxtı 08:00-22:45 (private repoda pulsuz limit ~2000 dəq/ay).
+- GitHub repo: `RufetBabayev/BakidaEvler` (PUBLIC, çünki ~100 dəq/gün iş private repoda pulsuz 2000 dəq/ay limitinə sığmır). İş axını: `.github/workflows/toplayici.yml`, hər 15 dəqiqə, 24 saat. Commit e-poçtu: GitHub noreply (şəxsi e-poçtu commit-ə yazma).
 - Gizli açarlar GitHub Secrets-də: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`. Heç vaxt kodda və ya söhbətdə yazma. `SUPABASE_*` mühit dəyişənləri olanda `main.py` vəziyyəti bazada saxlayır, yoxdursa yerli `seen.json` ilə işləyir.
