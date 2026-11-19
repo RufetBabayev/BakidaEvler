@@ -4,7 +4,8 @@ on:
   schedule:
     # Hər 15 dəqiqədən bir, günün 24 saatı (public repoda Actions limiti yoxdur).
     # GitHub bəzən bir neçə dəqiqə gecikdirir.
-    - cron: "*/15 * * * *"
+    # :00/:15/:30/:45 anlarında GitHub-un yükü böyükdür və cədvəl işləmələri itə bilir; ona görə sürüşdürülmüş dəqiqələr.
+    - cron: "7,22,37,52 * * * *"
   workflow_dispatch: {}       # əl ilə işə salmaq üçün
 
 concurrency:
