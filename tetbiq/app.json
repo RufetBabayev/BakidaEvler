@@ -22,6 +22,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "55d32dfc-5a1e-49d1-aafd-a632debdc973"
+      }
+    },
+    "owner": "rufetbabayev"
   }
 }
