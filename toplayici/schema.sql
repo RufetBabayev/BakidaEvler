@@ -47,3 +47,7 @@ grant all on table elanlar, toplayici_veziyyet to service_role;
 grant select on table elanlar to authenticated;
 drop policy if exists "oxumaq: giriş edən" on elanlar;
 create policy "oxumaq: giriş edən" on elanlar for select to authenticated using (true);
+
+-- Mərhələ 5: çoxlu sayt. Satıcı açarı (telefon və ya sayt hesabı) makler aşkarlamaq üçündür.
+alter table elanlar add column if not exists satici_acari text;
+create index if not exists elanlar_satici_acari_idx on elanlar (satici_acari);

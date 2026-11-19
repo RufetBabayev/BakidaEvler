@@ -74,3 +74,10 @@ Python 3, `requests`. Mərhələ 3-dən sonra Supabase, GitHub Actions; mərhəl
 - Ekranlar: `src/LoginScreen.tsx`, `src/ListScreen.tsx` (satıcı filtri: hamısı / ev sahibi / şübhəli / makler; otaq, qiymət, rayon). Elana toxunanda `link` açılır.
 - `src/config.ts`: ictimai publishable açar (gizli deyil). service_role açarını tətbiqə qoyma.
 - Qalanlar: telefonda sınaq (Expo Go), APK (EAS Build), push bildirişlər (mərhələ 6).
+
+## Mərhələ 5 qeydləri (çoxlu sayt)
+
+- Scraper interfeysi: bina.az `fetch` + `fetch_incremental` (ID skanı). List əsaslı saytlar `fetch_latest(known_ids, min_new_id, reveal_phone, log) -> (elanlar, xetalar, max_id)` verir; ortaq köməkçilər `scrapers/common.py`. Yeni sayt: `scrapers/<sayt>.py` + `main.py`-dakı `SCRAPERS` siyahısı.
+- Satıcı açarı `satıcı_açar` ("tel:<maskalı telefon>" bina.az, "tap:<istifadəçi ID>" tap.az) makler sayını bütün saytlar üzrə hesablayır (`makler.py`).
+- **tap.az** (hazırdır): GraphQL `https://tap.az/graphql`, Bakı + satış filtri (mənzil: property 740/3722, həyət evi: 750/3869). Telefon tam gizlidir ("+994 •••"). Satıcı tipi: mağaza hesabı = vasitəçi, şəxsi hesab = mülkiyyətçi; amma çox elanlı şəxsi hesablar (satıcının_elan_sayı ≥ 5) "şübhəli makler" olur. Mərtəbə yoxdur.
+- **emlak.az**: 403 verir (bloklayır) — keçilmir. Digər saytların vəziyyəti aşağıda yenilənir.

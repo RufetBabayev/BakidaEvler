@@ -50,13 +50,13 @@ def load_state(source):
     while True:
         r = _check(requests.get(
             f"{_base()}/elanlar", headers=_headers(),
-            params={"menba": f"eq.{source}", "select": "elan_id,satici_tipi,satici_adi,telefon,ilk_gorulme",
+            params={"menba": f"eq.{source}", "select": "elan_id,satici_tipi,satici_adi,telefon,satici_acari,ilk_gorulme",
                     "order": "elan_id", "limit": PAGE, "offset": offset}, timeout=60))
         rows = r.json()
         for x in rows:
             state["elanlar"][x["elan_id"]] = {
                 "ilk_görülmə": x["ilk_gorulme"], "satıcı_tipi": x["satici_tipi"],
-                "satıcı_adı": x["satici_adi"], "telefon": x["telefon"],
+                "satıcı_adı": x["satici_adi"], "telefon": x["telefon"], "satıcı_açar": x["satici_acari"],
             }
         if len(rows) < PAGE:
             break
@@ -81,6 +81,7 @@ def save(source, state, new_items):
             "satici_tipi": it.get("satıcı_tipi"),
             "satici_adi": it.get("satıcı_adı"),
             "telefon": it.get("telefon"),
+            "satici_acari": it.get("satıcı_açar"),
             "telefon_elan_sayi": it.get("telefon_elan_sayı"),
             "makler_netice": it.get("makler_nəticə"),
             "yenilenme_tarixi": it.get("yenilənmə_tarixi"),

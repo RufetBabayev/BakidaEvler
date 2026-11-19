@@ -180,6 +180,7 @@ def _normalize(it):
         "satıcı_tipi": _seller_type(it.get("contactTypeName")),
         "satıcı_adı": it.get("contactName"),
         "telefon": phones[0].get("value") if phones else None,
+        "satıcı_açar": ("tel:" + phones[0]["value"]) if phones and phones[0].get("value") else None,
         "paylaşılma_tarixi": None,  # bina.az bu məlumatı vermir
         "yenilənmə_tarixi": it.get("updatedAt"),
         "toplanma_vaxtı": _now(),
@@ -235,6 +236,7 @@ def fetch(known_ids, min_new_id=None, reveal_phone=False, max_pages=3, log=print
                             phones = (rev.get("revealPhones") or {}).get("phones") or []
                             if phones:
                                 rec["telefon"] = phones[0]
+                                rec["satıcı_açar"] = "tel:" + phones[0]
                         results.append(rec)
                     except Bloklandi:
                         raise
@@ -288,6 +290,7 @@ def fetch_incremental(last_id, pending, reveal_phone=False, max_requests=60, log
             phones = (rev.get("revealPhones") or {}).get("phones") or []
             if phones:
                 rec["telefon"] = phones[0]
+                rec["satıcı_açar"] = "tel:" + phones[0]
         return rec, True
 
     try:
