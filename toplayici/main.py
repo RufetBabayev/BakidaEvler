@@ -14,10 +14,10 @@ from pathlib import Path
 
 import db
 import makler
-from scrapers import bina, tap
+from scrapers import bina, domik, rahatemlak, tap, vipemlak, yeniemlak
 
 # Yeni sayt əlavə etmək: scrapers/<sayt>.py yaz və bura əlavə et.
-SCRAPERS = [bina, tap]
+SCRAPERS = [bina, tap, rahatemlak, vipemlak, yeniemlak, domik]
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"

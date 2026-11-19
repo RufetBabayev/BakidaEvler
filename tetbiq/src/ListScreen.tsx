@@ -4,7 +4,7 @@ import {
 } from "react-native";
 import { supabase } from "./supabase";
 import { colors } from "./theme";
-import { BOS_FILTR, Elan, Filtr, Satici } from "./types";
+import { BOS_FILTR, Elan, Filtr, SAYTLAR, Satici } from "./types";
 
 const SAHIFE = 30;
 
@@ -13,6 +13,7 @@ const SATICI: { id: Satici; ad: string }[] = [
   { id: "ev sahibi", ad: "Ev sahibi" },
   { id: "subheli", ad: "Şübhəli" },
   { id: "makler", ad: "Makler" },
+  { id: "namelum", ad: "Naməlum" },
 ];
 
 function nömrə(v: string): number | null {
@@ -36,6 +37,7 @@ function qiymət(e: Elan): string {
 function etiket(e: Elan): { text: string; color: string } {
   if (e.makler_netice === "ev sahibi") return { text: "Ev sahibi", color: colors.owner };
   if (e.makler_netice === "şübhəli makler") return { text: "Şübhəli makler", color: colors.suspect };
+  if (e.makler_netice === "naməlum") return { text: "Naməlum", color: colors.muted };
   return { text: "Makler", color: colors.agent };
 }
 
@@ -64,6 +66,8 @@ export default function ListScreen() {
     if (f.satici === "ev sahibi") q = q.eq("makler_netice", "ev sahibi");
     if (f.satici === "subheli") q = q.eq("makler_netice", "şübhəli makler");
     if (f.satici === "makler") q = q.eq("makler_netice", "makler");
+    if (f.satici === "namelum") q = q.eq("makler_netice", "naməlum");
+    if (f.sayt) q = q.eq("menba", f.sayt);
     if (f.otaq != null) q = f.otaq >= 5 ? q.gte("otaq_sayi", 5) : q.eq("otaq_sayi", f.otaq);
     const min = nömrə(f.minQiymet), max = nömrə(f.maxQiymet);
     if (min != null) q = q.gte("qiymet", min);
@@ -120,7 +124,7 @@ export default function ListScreen() {
             {e.satici_adi ?? ""}{e.telefon ? ` · ${e.telefon}` : ""}
             {e.telefon_elan_sayi && e.telefon_elan_sayi > 1 ? ` (${e.telefon_elan_sayi} elan)` : ""}
           </Text>
-          <Text style={s.time}>{nəvaxt(e.ilk_gorulme)}</Text>
+          <Text style={s.time}>{e.menba} · {nəvaxt(e.ilk_gorulme)}</Text>
         </View>
       </Pressable>
     );
@@ -141,6 +145,13 @@ export default function ListScreen() {
 
       {filtrAcik && (
         <View style={s.panel}>
+          <Text style={s.label}>Sayt</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>
+            <Chip ad="Hamısı" aktiv={filtr.sayt == null} onPress={() => setFiltr({ ...filtr, sayt: null })} />
+            {SAYTLAR.map((x) => (
+              <Chip key={x} ad={x} aktiv={filtr.sayt === x} onPress={() => setFiltr({ ...filtr, sayt: x })} />
+            ))}
+          </ScrollView>
           <Text style={s.label}>Otaq sayı</Text>
           <View style={s.chips}>
             <Chip ad="Hamısı" aktiv={filtr.otaq == null} onPress={() => setFiltr({ ...filtr, otaq: null })} />

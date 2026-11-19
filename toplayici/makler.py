@@ -11,12 +11,23 @@ SAYT_HEDD = 5     # saytın bildirdiyi ümumi elan sayı bu həddi keçirsə nə
 
 
 def acar(item_or_cache):
-    """Elanın/keş qeydinin satıcı açarı."""
+    """Elanın/keş qeydinin satıcı açarı.
+
+    - Sayt hesabı açarı (məs. "tap:123") olduğu kimi qalır.
+    - Telefon: 8+ rəqəm görünürsə yalnız telefon ("tel:..."); 5-7 rəqəm görünürsə telefon + satıcı adı
+      ("tn:...|ad") — çox gizlədilmiş nömrə tək başına fərqli adamları birləşdirər; daha az rəqəm: açar yoxdur.
+    """
     a = item_or_cache.get("satıcı_açar")
-    if a:
+    if a and not a.startswith("tel:"):
         return a
     tel = (item_or_cache.get("telefon") or "").strip()
-    return "tel:" + tel if tel else None
+    digits = sum(ch.isdigit() for ch in tel)
+    if digits >= 8:
+        return "tel:" + tel
+    ad = (item_or_cache.get("satıcı_adı") or "").strip().lower()
+    if digits >= 5 and ad:
+        return f"tn:{tel}|{ad}"
+    return None
 
 
 def say(seen_all):
@@ -44,6 +55,8 @@ def qiymetlendir(item, sayac):
         netice = "şübhəli makler"
     elif tip == "mülkiyyətçi":
         netice = "ev sahibi"
+    elif tip is None:  # sayt satıcı tipini yazmır: yalnız elan sayına görə
+        netice = "makler" if n >= HEDD else "naməlum"
     else:
         netice = None
     item["telefon_elan_sayı"] = n or None

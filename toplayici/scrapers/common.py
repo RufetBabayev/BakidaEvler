@@ -96,3 +96,43 @@ def text_flags(body):
     temir = "var" if re.search(r"təmirli|temirli|evro\s?təmir|əla təmir|yeni təmir", low) else (
         "yoxdur" if re.search(r"təmirsiz|temirsiz", low) else None)
     return cixaris, ipoteka, temir
+
+
+_AY = {"yanvar": 1, "fevral": 2, "mart": 3, "aprel": 4, "may": 5, "iyun": 6, "iyul": 7,
+       "avqust": 8, "sentyabr": 9, "oktyabr": 10, "noyabr": 11, "dekabr": 12}
+
+
+_HEFTE = [("bazar ertəsi", 0), ("çərşənbə axşamı", 1), ("çərşənbə", 2), ("cümə axşamı", 3),
+          ("cümə", 4), ("şənbə", 5), ("bazar", 6)]
+
+
+def parse_az_date(text, now=None):
+    """'Bu gün, 14:48' / 'Dünən, 16:15' / '10 Noyabr, 18:19' / '10 Noyabr 2025' -> ISO (+04:00). Tanınmazsa None."""
+    if not text:
+        return None
+    now = now or datetime.now(TZ)
+    t = text.strip().lower()
+    hm = re.search(r"(\d{1,2}):(\d{2})", t)
+    hour, minute = (int(hm.group(1)), int(hm.group(2))) if hm else (0, 0)
+    day = None
+    if "bu gün" in t or "bugün" in t:
+        day = now.date()
+    elif "dünən" in t:
+        day = (now - timedelta(days=1)).date()
+    elif any(t.startswith(name) for name, _ in _HEFTE):
+        wd = next(i for name, i in _HEFTE if t.startswith(name))
+        back = (now.weekday() - wd) % 7 or 7
+        day = (now - timedelta(days=back)).date()
+    else:
+        m = re.search(r"(\d{1,2})\s+([a-zəıöüşçğ]+)(?:\s+(\d{4}))?", t)
+        if m and m.group(2) in _AY:
+            year = int(m.group(3)) if m.group(3) else now.year
+            try:
+                day = datetime(year, _AY[m.group(2)], int(m.group(1))).date()
+                if not m.group(3) and day > now.date():
+                    day = day.replace(year=year - 1)
+            except ValueError:
+                day = None
+    if day is None:
+        return None
+    return datetime(day.year, day.month, day.day, hour, minute, tzinfo=TZ).isoformat(timespec="seconds")

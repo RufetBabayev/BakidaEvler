@@ -18,14 +18,17 @@ export type Elan = {
   data: { mərtəbə?: number | null; ümumi_mərtəbə?: number | null; başlıq?: string } | null;
 };
 
-export type Satici = "hamisi" | "ev sahibi" | "subheli" | "makler";
+export type Satici = "hamisi" | "ev sahibi" | "subheli" | "makler" | "namelum";
 
 export type Filtr = {
   satici: Satici;
+  sayt: string | null; // null = bütün saytlar
   otaq: number | null; // 5 = 5 və çox
   minQiymet: string;
   maxQiymet: string;
   rayon: string | null;
 };
 
-export const BOS_FILTR: Filtr = { satici: "hamisi", otaq: null, minQiymet: "", maxQiymet: "", rayon: null };
+export const SAYTLAR = ["bina.az", "tap.az", "rahatemlak.az", "vipemlak.az", "yeniemlak.az", "domik.az"];
+
+export const BOS_FILTR: Filtr = { satici: "hamisi", sayt: null, otaq: null, minQiymet: "", maxQiymet: "", rayon: null };
