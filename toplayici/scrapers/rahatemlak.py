@@ -11,7 +11,7 @@ import re
 import requests
 from bs4 import BeautifulSoup
 
-from .common import Bloklandi, Client, now_iso, parse_az_date, split_location, to_float
+from .common import Dayandi, Client, now_iso, parse_az_date, split_location, to_float
 
 SOURCE = "rahatemlak.az"
 BASE = "https://rahatemlak.az"
@@ -193,12 +193,12 @@ def fetch_latest(known_ids, min_new_id=None, reveal_phone=False, log=print):
                         continue
                     try:
                         results.append(_normalize(card, client.get(f"/elan/{card['id']}").text))
-                    except Bloklandi:
+                    except Dayandi:
                         raise
                     except Exception as e:
                         errors.append(f"{card['id']}: {e}")
-    except Bloklandi as e:
-        errors.append(f"BLOKLANMA ƏLAMƏTİ: {e}. Dayandım.")
+    except Dayandi as e:
+        errors.append(str(e))
     except requests.RequestException as e:
         errors.append(f"şəbəkə xətası: {e}")
     return results, errors, max_id

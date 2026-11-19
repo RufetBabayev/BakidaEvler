@@ -14,7 +14,7 @@ from datetime import date, datetime, timedelta
 import requests
 from bs4 import BeautifulSoup
 
-from .common import TZ, Bloklandi, Client, now_iso, split_location, to_float
+from .common import TZ, Dayandi, Client, now_iso, split_location, to_float
 
 SOURCE = "yeniemlak.az"
 BASE = "https://yeniemlak.az"
@@ -169,12 +169,12 @@ def fetch_latest(known_ids, min_new_id=None, reveal_phone=False, log=print):
                         continue
                     try:
                         results.append(_normalize(card, client.get(card["href"]).text))
-                    except Bloklandi:
+                    except Dayandi:
                         raise
                     except Exception as e:
                         errors.append(f"{card['id']}: {e}")
-    except Bloklandi as e:
-        errors.append(f"BLOKLANMA ƏLAMƏTİ: {e}. Dayandım.")
+    except Dayandi as e:
+        errors.append(str(e))
     except requests.RequestException as e:
         errors.append(f"şəbəkə xətası: {e}")
     return results, errors, max_id

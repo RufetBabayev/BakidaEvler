@@ -7,23 +7,17 @@ Hər scraper eyni interfeysi verir:
     SOURCE: str
     fetch(known_ids, min_new_id, reveal_phone, max_pages, log) -> (elanlar, xetalar)
 """
-import random
-import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 
 import requests
+
+from .common import TZ, Bloklandi, Client, Dayandi
 
 SOURCE = "bina.az"
 BASE = "https://bina.az"
 GRAPHQL = BASE + "/graphql"
-TZ = timezone(timedelta(hours=4))  # Bakı vaxtı
 
-USER_AGENT = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
-)
 PAGE_SIZE = 25          # saytın icazə verdiyi maksimum
-DELAY = (2.0, 4.0)      # sorğular arası təsadüfi fasilə (saniyə)
 
 # Bakı = cityId 1. Kateqoriyalar: 1 = Mənzil (yeni+köhnə tikili), 5 = Həyət evi/Bağ evi.
 # Səhifə büdcəsi (cəmi 3): mənzil 2 səhifə, həyət evi 1 səhifə.
@@ -71,36 +65,6 @@ mutation RevealPhones($targetId: ID!, $targetType: PhonesRevealTargetTypeEnum!, 
 HOME_CATEGORIES = {"1", "2", "3", "5"}  # mənzil (yeni/köhnə tikili), həyət evi/bağ evi
 GAP_LIMIT = 8        # ardıcıl bu qədər boş ID gələndə "sona çatdıq" sayırıq
 PENDING_WINDOW = 150  # boş çıxan ID-ni bu qədər ID müddətində yenidən yoxlayırıq (moderasiya gecikməsi)
-
-
-class Bloklandi(Exception):
-    """Sayt sorğunu rədd etdi (403/429/captcha). Davam etmirik."""
-
-
-class _Client:
-    def __init__(self):
-        self.s = requests.Session()
-        self.s.headers.update({
-            "User-Agent": USER_AGENT,
-            "Accept": "application/json",
-            "Origin": BASE,
-            "Referer": BASE + "/baki/alqi-satqi/menziller",
-            "X-Platform": "desktop",
-        })
-        self._first = True
-
-    def gql(self, query, variables):
-        if not self._first:
-            time.sleep(random.uniform(*DELAY))
-        self._first = False
-        r = self.s.post(GRAPHQL, json={"query": query, "variables": variables}, timeout=25)
-        if r.status_code in (403, 429) or "captcha" in r.text[:2000].lower():
-            raise Bloklandi(f"HTTP {r.status_code}: sayt sorğunu qəbul etmədi")
-        r.raise_for_status()
-        data = r.json()
-        if data.get("errors") and not data.get("data"):
-            raise RuntimeError(data["errors"][0].get("message", "GraphQL xətası"))
-        return data["data"]
 
 
 def _now():
@@ -199,7 +163,7 @@ def fetch(known_ids, min_new_id=None, reveal_phone=False, max_pages=3, log=print
     Yeni olmayan elanların detalına girmirik (saytı yükləməmək üçün): onlar yalnız
     {"elan_id", "link", "yenilənmə_tarixi", "yeni": False} olur, qalanını main.py keşdən doldurur.
     """
-    client = _Client()
+    client = Client(BASE, {"Accept": "application/json", "Origin": BASE, "Referer": BASE + "/baki/alqi-satqi/menziller", "X-Platform": "desktop"})
     results, errors = [], []
     pages_done = 0
     try:
@@ -238,15 +202,15 @@ def fetch(known_ids, min_new_id=None, reveal_phone=False, max_pages=3, log=print
                                 rec["telefon"] = phones[0]
                                 rec["satıcı_açar"] = "tel:" + phones[0]
                         results.append(rec)
-                    except Bloklandi:
+                    except Dayandi:
                         raise
                     except Exception as e:  # tək elanın xətası hamısını dayandırmasın
                         errors.append(f"{item_id}: {e}")
                 if not data["pageInfo"]["hasNextPage"]:
                     break
                 cursor = data["pageInfo"]["endCursor"]
-    except Bloklandi as e:
-        errors.append(f"BLOKLANMA ƏLAMƏTİ: {e}. Dayandım.")
+    except Dayandi as e:
+        errors.append(str(e))
     except requests.RequestException as e:
         errors.append(f"şəbəkə xətası: {e}")
     return results, errors
@@ -270,7 +234,7 @@ def fetch_incremental(last_id, pending, reveal_phone=False, max_requests=60, log
     pending: əvvəl boş çıxmış (silinmiş və ya moderasiyada) ID-lər; yenidən yoxlanılır.
     Qaytarır: (elanlar, xetalar, yeni_last_id, yeni_pending)
     """
-    client = _Client()
+    client = Client(BASE, {"Accept": "application/json", "Origin": BASE, "Referer": BASE + "/baki/alqi-satqi/menziller", "X-Platform": "desktop"})
     results, errors = [], []
     requests_made = 0
     max_seen = last_id
@@ -302,7 +266,7 @@ def fetch_incremental(last_id, pending, reveal_phone=False, max_requests=60, log
                 continue
             try:
                 rec, exists = check(pid)
-            except Bloklandi:
+            except Dayandi:
                 raise
             except Exception as e:
                 errors.append(f"{pid}: {e}")
@@ -319,7 +283,7 @@ def fetch_incremental(last_id, pending, reveal_phone=False, max_requests=60, log
             cur += 1
             try:
                 rec, exists = check(cur)
-            except Bloklandi:
+            except Dayandi:
                 raise
             except Exception as e:
                 errors.append(f"{cur}: {e}")
@@ -334,8 +298,8 @@ def fetch_incremental(last_id, pending, reveal_phone=False, max_requests=60, log
                 new_pending.append(cur)
         # frontier boşluqlarını (sondakı GAP_LIMIT boş ID) yenidən saxlayırıq, max_seen-dən sonrakılar
         log(f"  ID skanı: {last_id + 1}..{cur}, {requests_made} sorğu, {len(results)} uyğun elan")
-    except Bloklandi as e:
-        errors.append(f"BLOKLANMA ƏLAMƏTİ: {e}. Dayandım.")
+    except Dayandi as e:
+        errors.append(str(e))
     except requests.RequestException as e:
         errors.append(f"şəbəkə xətası: {e}")
     return results, errors, max_seen, sorted(p for p in set(new_pending) if p < max_seen)

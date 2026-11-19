@@ -86,3 +86,10 @@ Python 3, `requests`. Mərhələ 3-dən sonra Supabase, GitHub Actions; mərhəl
 - **domik.az** (hazırdır): HTML, `/elanlar/satis/menzil|heyet-evi`. Satıcı tipi, ad, maskalı telefon, yerləşdirmə/yenilənmə vaxtı var.
 - **emlak.az**: 403 verir (bloklayır) — keçilmir. **korter.az**: yeni tikili/developer kataloqudur (ev sahibi elanı yoxdur), mənası yoxdur — əlavə olunmadı.
 - `makler_nəticə`: "ev sahibi" / "makler" / "şübhəli makler" / "naməlum" (saytda satıcı tipi yoxdur və elan sayı < 3).
+
+## Performans və etibarlılıq (2026-11-19)
+
+- Problem: ilk işləmə bütün saytların ~400 elan detalını ARDICIL çəkirdi (2-4 s fasilə) = 20+ dəq; loq da görünmürdü (stdout bufer). `seen.json` problem deyildi: Supabase rejimində vəziyyət bazadadır (`toplayici_veziyyet` + `elanlar`), işləmələr arasında saxlanır. Köhnə elanların detalı onsuz da açılmırdı (siyahıdan ID/keşlə tanınır).
+- Həll: saytlar PARALEL (ThreadPoolExecutor, hər saytın öz `Client`-i → eyni sayta eyni anda 1 sorğu, 2-4 s fasilə qalır); hər sayta 180 s vaxt limiti (`SITE_TIME_LIMIT`), bitəndə "VAXT BİTDİ", topladığı saxlanır, qalanı növbəti işləmədə davam edir (ID-lər irəliləmir); timeout (10 s connect, 20 s read), şəbəkə xətasında max 2 retry; 403/429/503/Cloudflare/captcha → "BLOKLANDI: status X", sayt dayanır, digərləri davam edir. `python -u` + `PYTHONUNBUFFERED=1`, `timeout-minutes: 10`, `concurrency` var.
+- Sayt ortalama vaxtları (adi işləmə, yerli ölçü): rahatemlak ~10 s, vipemlak ~10 s, yeniemlak ~4 s, domik ~12 s, tap ~40 s, bina 1-3 dəq (ID skanı, yeni ID sayından asılıdır).
+- Mərkəzləşdirilmiş HTTP kodu: `scrapers/common.py` (`Client`, `Dayandi`/`Bloklandi`/`VaxtBitdi`). Yeni scraper `Client(BASE)` işlətməlidir və `Dayandi`-ni tutub `errors.append(str(e))` etməlidir.

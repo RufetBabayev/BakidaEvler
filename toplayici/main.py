@@ -9,6 +9,8 @@
 import argparse
 import json
 import sys
+import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -99,14 +101,21 @@ def main():
             seen_all.setdefault(sc.SOURCE, {"son_max_id": None, "gozleyen": [], "elanlar": {}})
         seen_all[sc.SOURCE].setdefault("gozleyen", [])
 
-    # 2) topla
-    results = {}
-    for sc in scrapers:
-        print(f"[{NAME}] {sc.SOURCE}: toplanır...")
+    # 2) topla: saytlar PARALEL işləyir (hər saytın öz fasiləsi/Client-i var, eyni sayta eyni anda 1 sorğu)
+    t_all = time.monotonic()
+    results, times = {}, {}
+
+    def work(sc):
+        t0 = time.monotonic()
+        print(f"[{NAME}] {sc.SOURCE}: başladı", flush=True)
         try:
             results[sc.SOURCE] = run_source(sc, seen_all[sc.SOURCE], args)
         except Exception as e:  # bir saytın xətası digərlərini dayandırmasın
             results[sc.SOURCE] = ([], [f"gözlənilməz xəta: {e}"])
+        times[sc.SOURCE] = time.monotonic() - t0
+
+    with ThreadPoolExecutor(max_workers=max(1, len(scrapers))) as pool:
+        list(pool.map(work, scrapers))
 
     # 3) yeniləri keşə yaz, sonra makler qiymətləndirməsi (bütün saytlar üzrə)
     for sc in scrapers:
@@ -122,6 +131,7 @@ def main():
     sayac = makler.say(seen_all)
 
     all_items, any_error = [], False
+    ok_sites, total_new = 0, 0
     for sc in scrapers:
         items, errors = results[sc.SOURCE]
         for it in items:
@@ -135,12 +145,28 @@ def main():
         owners = sum(1 for i in new if i.get("satıcı_tipi") == "mülkiyyətçi")
         agents = sum(1 for i in new if i.get("satıcı_tipi") == "vasitəçi")
         suspects = sum(1 for i in new if i.get("makler_nəticə") == "şübhəli makler")
-        print(f"[{NAME}] {sc.SOURCE}: {len(items)} elan toplandı | {len(new)} yeni | "
-              f"{owners} mülkiyyətçi, {agents} vasitəçi | {suspects} şübhəli makler | {len(errors)} xəta")
+        sec = times.get(sc.SOURCE, 0)
+        blocked = next((e for e in errors if e.startswith("BLOKLANDI")), None)
+        timeout = next((e for e in errors if e.startswith("VAXT BİTDİ")), None)
+        if blocked:
+            print(f"[{NAME}] {sc.SOURCE:<14}→ {blocked} | {len(new)} yeni (bloklanmadan əvvəl) | {sec:.0f} s", flush=True)
+        else:
+            extra = f" | {timeout}" if timeout else ""
+            print(f"[{NAME}] {sc.SOURCE:<14}→ {len(items)} elan | {len(new)} yeni | "
+                  f"{owners} mülkiyyətçi, {agents} vasitəçi, {suspects} şübhəli | {len(errors) - (1 if timeout else 0)} xəta"
+                  f"{extra} | {sec:.0f} s", flush=True)
         for e in errors:
-            print("   xəta:", e)
-        any_error = any_error or bool(errors)
+            if not e.startswith(("BLOKLANDI", "VAXT BİTDİ")):
+                print("   xəta:", e, flush=True)
+        if not blocked and not [e for e in errors if not e.startswith("VAXT BİTDİ")]:
+            ok_sites += 1
+        any_error = any_error or bool([e for e in errors if not e.startswith(("BLOKLANDI", "VAXT BİTDİ"))])
+        total_new += len(new)
         all_items.extend(items)
+
+    total = time.monotonic() - t_all
+    print(f"[{NAME}] CƏMİ: {ok_sites}/{len(scrapers)} sayt uğurlu | {total_new} yeni elan | "
+          f"{int(total // 60)} dəq {int(total % 60)} s", flush=True)
 
     if use_db:
         print("Nəticə Supabase-ə yazıldı." if all_items else "Yeni elan yoxdur.")

@@ -1,4 +1,5 @@
 """Bütün scraper-lər üçün ümumi köməkçilər: nəzakətli HTTP, vaxt, mətn təmizləmə."""
+import os
 import random
 import re
 import time
@@ -11,11 +12,24 @@ USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 )
-DELAY = (2.0, 4.0)  # sorğular arası təsadüfi fasilə (saniyə)
+DELAY = (2.0, 4.0)          # eyni sayta sorğular arası təsadüfi fasilə (saniyə); 2 san-dən az OLMAZ
+TIMEOUT = (10, 20)          # (connect, read) saniyə
+RETRIES = 2                 # şəbəkə xətasında maksimum təkrar
+SITE_TIME_LIMIT = int(os.environ.get("SITE_TIME_LIMIT", "180"))  # hər sayta maksimum vaxt (saniyə)
+BLOCK_STATUSES = (403, 429, 503)
+BLOCK_MARKERS = ("captcha", "cf-chl", "just a moment", "attention required", "cloudflare ray id")
 
 
-class Bloklandi(Exception):
-    """Sayt sorğunu rədd etdi (403/429/captcha). Davam etmirik, keçmirik."""
+class Dayandi(Exception):
+    """Saytı dayandırırıq (bloklanma və ya vaxt limiti); topladığımız saxlanılır, digər saytlar davam edir."""
+
+
+class Bloklandi(Dayandi):
+    """Sayt sorğunu rədd etdi (403/429/503/Cloudflare/captcha). Keçmirik, yalnız bildiririk."""
+
+
+class VaxtBitdi(Dayandi):
+    """Saytın vaxt limiti bitdi."""
 
 
 def now_iso():
@@ -23,35 +37,60 @@ def now_iso():
 
 
 class Client:
-    """requests.Session + hər sorğudan əvvəl 2-4 san gözləmə + bloklanma aşkarı."""
+    """requests.Session + 2-4 san fasilə + timeout/retry + bloklanma aşkarı + vaxt limiti.
 
-    def __init__(self, base, headers=None):
+    Hər sayt öz Client-ini yaradır, yəni eyni sayta eyni anda yalnız 1 sorğu gedir.
+    """
+
+    def __init__(self, base, headers=None, time_limit=None):
         self.base = base.rstrip("/")
         self.s = requests.Session()
         self.s.headers.update({"User-Agent": USER_AGENT, "Accept-Language": "az,en;q=0.8"})
         if headers:
             self.s.headers.update(headers)
         self._first = True
+        self.requests_made = 0
+        self.last_status = None
+        self.deadline = time.monotonic() + (time_limit if time_limit is not None else SITE_TIME_LIMIT)
+        self.limit = time_limit if time_limit is not None else SITE_TIME_LIMIT
 
     def _wait(self):
+        if time.monotonic() >= self.deadline:
+            raise VaxtBitdi(f"VAXT BİTDİ ({self.limit} san)")
         if not self._first:
             time.sleep(random.uniform(*DELAY))
         self._first = False
 
-    def _check(self, r):
-        if r.status_code in (403, 429) or "captcha" in r.text[:3000].lower():
-            raise Bloklandi(f"HTTP {r.status_code}: sayt sorğunu qəbul etmədi")
+    def _send(self, method, url, **kw):
+        last = None
+        for attempt in range(RETRIES + 1):
+            if time.monotonic() >= self.deadline:
+                raise VaxtBitdi(f"VAXT BİTDİ ({self.limit} san)")
+            try:
+                r = self.s.request(method, url, timeout=TIMEOUT, **kw)
+                break
+            except (requests.ConnectionError, requests.Timeout) as e:
+                last = e
+                if attempt < RETRIES:
+                    time.sleep(2 * (attempt + 1))
+        else:
+            raise last
+        self.requests_made += 1
+        self.last_status = r.status_code
+        low = r.text[:3000].lower()
+        if r.status_code in BLOCK_STATUSES or any(m in low for m in BLOCK_MARKERS):
+            raise Bloklandi(f"BLOKLANDI: status {r.status_code}")
         r.raise_for_status()
         return r
 
     def get(self, path_or_url, **kw):
         self._wait()
         url = path_or_url if path_or_url.startswith("http") else self.base + path_or_url
-        return self._check(self.s.get(url, timeout=30, **kw))
+        return self._send("GET", url, **kw)
 
     def gql(self, query, variables, path="/graphql"):
         self._wait()
-        r = self._check(self.s.post(self.base + path, json={"query": query, "variables": variables}, timeout=30))
+        r = self._send("POST", self.base + path, json={"query": query, "variables": variables})
         data = r.json()
         if data.get("errors") and not data.get("data"):
             raise RuntimeError(data["errors"][0].get("message", "GraphQL xətası"))

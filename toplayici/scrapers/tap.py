@@ -9,7 +9,7 @@ Interfeys (list-əsaslı scraper):
     SOURCE: str
     fetch_latest(known_ids, min_new_id, reveal_phone, log) -> (elanlar, xetalar, max_id)
 """
-from .common import Bloklandi, Client, now_iso, split_location, text_flags, to_float
+from .common import Dayandi, Client, now_iso, split_location, text_flags, to_float
 
 import requests
 
@@ -143,15 +143,15 @@ def fetch_latest(known_ids, min_new_id=None, reveal_phone=False, log=print):
                         if not d:
                             raise RuntimeError("elan tapılmadı")
                         results.append(_normalize(d))
-                    except Bloklandi:
+                    except Dayandi:
                         raise
                     except Exception as e:
                         errors.append(f"{sid}: {e}")
                 if not data["pageInfo"]["hasNextPage"]:
                     break
                 after = data["pageInfo"]["endCursor"]
-    except Bloklandi as e:
-        errors.append(f"BLOKLANMA ƏLAMƏTİ: {e}. Dayandım.")
+    except Dayandi as e:
+        errors.append(str(e))
     except requests.RequestException as e:
         errors.append(f"şəbəkə xətası: {e}")
     return results, errors, max_id
