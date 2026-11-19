@@ -93,3 +93,10 @@ Python 3, `requests`. Mərhələ 3-dən sonra Supabase, GitHub Actions; mərhəl
 - Həll: saytlar PARALEL (ThreadPoolExecutor, hər saytın öz `Client`-i → eyni sayta eyni anda 1 sorğu, 2-4 s fasilə qalır); hər sayta 180 s vaxt limiti (`SITE_TIME_LIMIT`), bitəndə "VAXT BİTDİ", topladığı saxlanır, qalanı növbəti işləmədə davam edir (ID-lər irəliləmir); timeout (10 s connect, 20 s read), şəbəkə xətasında max 2 retry; 403/429/503/Cloudflare/captcha → "BLOKLANDI: status X", sayt dayanır, digərləri davam edir. `python -u` + `PYTHONUNBUFFERED=1`, `timeout-minutes: 10`, `concurrency` var.
 - Sayt ortalama vaxtları (adi işləmə, yerli ölçü): rahatemlak ~10 s, vipemlak ~10 s, yeniemlak ~4 s, domik ~12 s, tap ~40 s, bina 1-3 dəq (ID skanı, yeni ID sayından asılıdır).
 - Mərkəzləşdirilmiş HTTP kodu: `scrapers/common.py` (`Client`, `Dayandi`/`Bloklandi`/`VaxtBitdi`). Yeni scraper `Client(BASE)` işlətməlidir və `Dayandi`-ni tutub `errors.append(str(e))` etməlidir.
+
+## Avtomatik işləmə: öz-özünü davam etdirən zəncir (2026-11-19)
+
+- GitHub `schedule` (cron) bu repoda 2+ saat heç vaxt işə düşmədi (yalnız əl ilə işə salınanlar işlədi; :00/:15 yerinə 7,22,37,52 də kömək etmədi).
+- Həll: `.github/workflows/toplayici.yml` bir işləmədə ~5 saat 40 dəq ərzində hər 15 dəqiqədən bir `python -u main.py` çağırır, sonda `gh workflow run` ilə növbəti işləməni özü başladır (GITHUB_TOKEN-in `workflow_dispatch` etməsinə icazə var, `permissions: actions: write`). `concurrency` işləmələrin üst-üstə düşməsinin qarşısını alır. `schedule` ehtiyat kimi qalır.
+- Zənciri dayandırmaq: Actions-da işləyən "toplayici"-ni Cancel et (Cancel zamanı növbəti işləmə başlamır). Yenidən başlatmaq: "Run workflow".
+- Risk: zəncir qırılsa (GitHub nasazlığı, əl ilə cancel), yeni elan yığılmır; təkrar "Run workflow" lazımdır. Zəncir qırılması üçün xəbərdarlıq hələ yoxdur.

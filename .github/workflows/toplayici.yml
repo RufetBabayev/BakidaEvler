@@ -1,21 +1,27 @@
 name: toplayici
 
+# GitHub-un `schedule` (cron) tetikləyicisi bu repoda saatlarla heç işləmədi (yalnız əl ilə işə salınanlar işləyirdi).
+# Ona görə iş axını özü-özünü davam etdirir: bir işləmə ~5 saat 40 dəq ərzində hər 15 dəqiqədən bir toplayıcını
+# çağırır, sonda növbəti işləməni özü başladır (GITHUB_TOKEN ilə workflow_dispatch icazəlidir).
+# `schedule` ehtiyat kimi qalır (işləyərsə, concurrency onu növbəyə qoyur).
+# Zənciri DAYANDIRMAQ üçün: Actions səhifəsində işləyən "toplayici"-ni Cancel et, sonra bu faylı sil/söndür.
 on:
   schedule:
-    # Hər 15 dəqiqədən bir, günün 24 saatı (public repoda Actions limiti yoxdur).
-    # GitHub bəzən bir neçə dəqiqə gecikdirir.
-    # :00/:15/:30/:45 anlarında GitHub-un yükü böyükdür və cədvəl işləmələri itə bilir; ona görə sürüşdürülmüş dəqiqələr.
     - cron: "7,22,37,52 * * * *"
-  workflow_dispatch: {}       # əl ilə işə salmaq üçün
+  workflow_dispatch: {}
 
 concurrency:
   group: toplayici
   cancel-in-progress: false
 
+permissions:
+  contents: read
+  actions: write   # növbəti işləməni başlatmaq üçün
+
 jobs:
   topla:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 355
     env:
       PYTHONUNBUFFERED: "1"   # loq canlı görünsün
     defaults:
@@ -29,7 +35,24 @@ jobs:
           cache: pip
           cache-dependency-path: toplayici/requirements.txt
       - run: pip install -r requirements.txt
-      - run: python -u main.py
+
+      - name: Toplayıcını hər 15 dəqiqədən bir işlət (~5 saat 40 dəq)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          END=$(( $(date +%s) + 340*60 ))
+          while [ "$(date +%s)" -lt "$END" ]; do
+            START=$(date +%s)
+            echo "::group::işləmə $(date -u +%H:%M:%S) UTC"
+            timeout 540 python -u main.py || echo "::warning::işləmə xətası/vaxt aşımı, növbəti dövrdə davam"
+            echo "::endgroup::"
+            WAIT=$(( START + 15*60 - $(date +%s) ))
+            if [ "$WAIT" -gt 0 ] && [ $(( $(date +%s) + WAIT )) -lt "$END" ]; then sleep "$WAIT"; fi
+          done
+
+      - name: Növbəti işləməni başlat
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run toplayici.yml --ref main --repo "$GITHUB_REPOSITORY"
