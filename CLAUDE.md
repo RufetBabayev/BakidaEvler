@@ -110,3 +110,10 @@ Python 3, `requests`. Mərhələ 3-dən sonra Supabase, GitHub Actions; mərhəl
 - Tətbiq `AppState` "active" olanda siyahını avtomatik yeniləyir.
 - Workflow dəyişikliyi və yeni kod işləyən zəncirə təsir etmir: zənciri Cancel edib yenidən "Run workflow" etmək lazımdır.
 - Ən son (2026-11-19) ntfy.sh ilə sınaq yolu atıldı (texniki olmayan istifadəçi üçün çətin idi).
+
+## FCM qurulumunun tələləri (2026-11-20, sınaqdan keçdi)
+
+- Firebase service account açarı Expo-ya yüklənəndən sonra da Google 403 `cloudmessaging.messages.create denied` verdi: xidmət hesabına (`firebase-adminsdk-fbsvc@<layihə>.iam.gserviceaccount.com`) Google Cloud IAM-də **Firebase Cloud Messaging API Admin** rolu əlavə etmək lazım idi (IAM-də hesab ümumiyyətlə siyahıda yox idi). Rol 2-3 dəqiqəyə təsirə girir.
+- Diaqnostika üsulu: tokenə birbaşa `https://exp.host/--/api/v2/push/send` göndər, sonra `.../getReceipts` ilə `details.fcm.response`-a bax (ticket `ok` olsa da receipt `error` ola bilər).
+- Test nəticəsi: token `push_tokenlar`-da, test bildirişi telefona çatdı (APK build `fb4a65ab-...`).
+- Cavab verilməyən: avtomatik zəncirin ilk 5h40m keçidi (`gh workflow run`) hələ təsdiqlənməyib.
