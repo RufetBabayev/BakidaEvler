@@ -2,7 +2,10 @@ name: toplayici
 
 on:
   schedule:
-    - cron: "*/15 * * * *"   # hər 15 dəqiqədən bir (GitHub bəzən bir neçə dəqiqə gecikdirir)
+    # Hər 15 dəqiqədən bir, yalnız Bakı vaxtı 08:00-22:45 (UTC 04:00-18:45).
+    # Private repoda pulsuz limit (2000 dəq/ay) aşılmasın deyə gecə işləmir.
+    # GitHub bəzən bir neçə dəqiqə gecikdirir.
+    - cron: "*/15 4-18 * * *"
   workflow_dispatch: {}       # əl ilə işə salmaq üçün
 
 concurrency:

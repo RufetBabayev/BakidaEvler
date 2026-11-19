@@ -23,7 +23,7 @@ BakidaEvler/
 
 1. **bina.az toplayıcısı** — BİTDİ (bax: aşağıdakı qeydlər)
 2. Makler aşkarlama (eyni telefonla çoxlu elan) — BİRİNCİ VERSİYA HAZIRDIR (`toplayici/makler.py`)
-3. Supabase bazası + GitHub Actions ilə hər 15 dəqiqədən bir avtomatik işləmə
+3. Supabase bazası + GitHub Actions ilə avtomatik işləmə — KOD HAZIRDIR, işə salınma yoxlanılır (bax: Mərhələ 3 qeydləri)
 4. Expo (React Native) tətbiqi — `tetbiq/`
 5. Digər saytlar: tap.az, yeniemlak.az, emlak.az, vipemlak.az, rahatemlak.az, domik.az, korter.az
 6. Push bildirişlər
@@ -60,3 +60,9 @@ Python 3, `requests`. Mərhələ 3-dən sonra Supabase, GitHub Actions; mərhəl
 - Hər elana `telefon_elan_sayı` və `makler_nəticə` ("makler" / "şübhəli makler" / "ev sahibi") əlavə olunur. "Şübhəli" = mülkiyyətçi yazılıb, amma eyni telefonla 3+ elan.
 - Telefon maskalıdır (son 2 rəqəm gizli), ona görə təsadüfi üst-üstə düşmə mümkündür. Dəqiqlik üçün `--telefon` ilə tam nömrə. Hələ real məlumatla yetərincə yoxlanmayıb: elan toplandıqca hədd (3) tənzimlənməlidir.
 - Hazırda yalnız 3 "şübhəli" (Sea Breeze, korporativ hesab) tapılıb; saxta mülkiyyətçi nümunəsi hələ yoxdur.
+
+## Mərhələ 3 qeydləri (Supabase + GitHub Actions)
+
+- Supabase layihəsi: `bakidaevler` (ref `zlxvaztepmprydphxmwu`). Cədvəllər: `elanlar`, `toplayici_veziyyet` (`toplayici/schema.sql`). RLS açıq, siyasət yoxdur; yalnız `service_role` açarı yazır.
+- GitHub repo: `RufetBabayev/BakidaEvler` (PRIVATE). İş axını: `.github/workflows/toplayici.yml`, hər 15 dəqiqə, yalnız Bakı vaxtı 08:00-22:45 (private repoda pulsuz limit ~2000 dəq/ay).
+- Gizli açarlar GitHub Secrets-də: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`. Heç vaxt kodda və ya söhbətdə yazma. `SUPABASE_*` mühit dəyişənləri olanda `main.py` vəziyyəti bazada saxlayır, yoxdursa yerli `seen.json` ilə işləyir.
