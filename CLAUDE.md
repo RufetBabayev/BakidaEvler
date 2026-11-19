@@ -24,7 +24,7 @@ BakidaEvler/
 1. **bina.az toplayıcısı** — BİTDİ (bax: aşağıdakı qeydlər)
 2. Makler aşkarlama (eyni telefonla çoxlu elan) — BİRİNCİ VERSİYA HAZIRDIR (`toplayici/makler.py`)
 3. Supabase bazası + GitHub Actions ilə avtomatik işləmə — BİTDİ (ilk əl ilə işləmə 2026-11-19: 75 elan bazaya yazıldı, 4m18s)
-4. Expo (React Native) tətbiqi — `tetbiq/`
+4. Expo (React Native) tətbiqi — `tetbiq/` — İLK VERSİYA YAZILDI (giriş + siyahı + filtrlər), telefonda sınanmayıb
 5. Digər saytlar: tap.az, yeniemlak.az, emlak.az, vipemlak.az, rahatemlak.az, domik.az, korter.az
 6. Push bildirişlər
 
@@ -66,3 +66,11 @@ Python 3, `requests`. Mərhələ 3-dən sonra Supabase, GitHub Actions; mərhəl
 - Supabase layihəsi: `bakidaevler` (ref `zlxvaztepmprydphxmwu`). Cədvəllər: `elanlar`, `toplayici_veziyyet` (`toplayici/schema.sql`). RLS açıq, siyasət yoxdur; yalnız `service_role` açarı yazır.
 - GitHub repo: `RufetBabayev/BakidaEvler` (PUBLIC, çünki ~100 dəq/gün iş private repoda pulsuz 2000 dəq/ay limitinə sığmır). İş axını: `.github/workflows/toplayici.yml`, hər 15 dəqiqə, 24 saat. Commit e-poçtu: GitHub noreply (şəxsi e-poçtu commit-ə yazma).
 - Gizli açarlar GitHub Secrets-də: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`. Heç vaxt kodda və ya söhbətdə yazma. `SUPABASE_*` mühit dəyişənləri olanda `main.py` vəziyyəti bazada saxlayır, yoxdursa yerli `seen.json` ilə işləyir.
+
+## Mərhələ 4 qeydləri (tətbiq)
+
+- Expo SDK 58, TypeScript. Expo API-ləri dəyişib: kod yazmazdan əvvəl `tetbiq/AGENTS.md`-ə və https://docs.expo.dev/llms.txt-ə bax, paketləri `npx expo install` ilə qur.
+- Giriş: Supabase Auth (e-poçt+parol). Qeydiyyat söndürülməlidir; istifadəçini sahibi Supabase panelində əl ilə yaradır. Oxuma siyasəti: `elanlar` cədvəli yalnız `authenticated` üçün SELECT (schema.sql-in sonu).
+- Ekranlar: `src/LoginScreen.tsx`, `src/ListScreen.tsx` (satıcı filtri: hamısı / ev sahibi / şübhəli / makler; otaq, qiymət, rayon). Elana toxunanda `link` açılır.
+- `src/config.ts`: ictimai publishable açar (gizli deyil). service_role açarını tətbiqə qoyma.
+- Qalanlar: telefonda sınaq (Expo Go), APK (EAS Build), push bildirişlər (mərhələ 6).

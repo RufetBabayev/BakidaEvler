@@ -41,3 +41,9 @@ alter table toplayici_veziyyet enable row level security;
 
 -- Layihə "yeni cədvəllərə API girişi avtomatik ver" seçimi olmadan yaradılıbsa, toplayıcı üçün icazə lazımdır:
 grant all on table elanlar, toplayici_veziyyet to service_role;
+
+-- Mərhələ 4: tətbiq yalnız GİRİŞ EDƏN istifadəçi ilə oxuya bilər (yazmaq yox).
+-- Qeydiyyat Supabase-də söndürülür, istifadəçini sahibi özü əlavə edir.
+grant select on table elanlar to authenticated;
+drop policy if exists "oxumaq: giriş edən" on elanlar;
+create policy "oxumaq: giriş edən" on elanlar for select to authenticated using (true);
