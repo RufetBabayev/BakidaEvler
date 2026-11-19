@@ -40,7 +40,6 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}   # telefon bildirişi (ntfy.sh); yoxdursa bildiriş göndərilmir
         run: |
           END=$(( $(date +%s) + 340*60 ))
           while [ "$(date +%s)" -lt "$END" ]; do

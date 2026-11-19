@@ -6,7 +6,7 @@ Açarlar mühit dəyişənlərindən oxunur (kodda və ya gitdə saxlanmır):
 Bunlar yoxdursa toplayıcı köhnə qaydada yerli seen.json ilə işləyir.
 """
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import requests
 
@@ -92,6 +92,30 @@ def save(source, state, new_items):
                 {"Prefer": "resolution=merge-duplicates,return=minimal"}),
                 params={"on_conflict": "menba,elan_id"}, json=rows[i:i + 200], timeout=60))
 
+    _save_state(source, state)
+
+
+def cleanup(days=30):
+    """days gündən köhnə elanları silir (baza böyüməsin). Köhnə elanlar siyahıda yenidən "yeni" kimi görünmür:
+    saytlar ID/tarixə görə süzülür. Silinən sətirlərin sayını qaytarır (bilinmirsə None)."""
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    r = _check(requests.delete(f"{_base()}/elanlar", headers=_headers({"Prefer": "count=exact,return=minimal"}),
+                               params={"ilk_gorulme": f"lt.{cutoff}"}, timeout=120))
+    total = (r.headers.get("Content-Range") or "").split("/")[-1]
+    return int(total) if total.isdigit() else None
+
+
+def fetch_tokens():
+    """Bildiriş tokenləri (tətbiqi qurmuş telefonlar)."""
+    r = _check(requests.get(f"{_base()}/push_tokenlar", headers=_headers(), params={"select": "token"}, timeout=30))
+    return [x["token"] for x in r.json()]
+
+
+def delete_token(token):
+    _check(requests.delete(f"{_base()}/push_tokenlar", headers=_headers(), params={"token": f"eq.{token}"}, timeout=30))
+
+
+def _save_state(source, state):
     _check(requests.post(f"{_base()}/toplayici_veziyyet", headers=_headers(
         {"Prefer": "resolution=merge-duplicates,return=minimal"}),
         params={"on_conflict": "menba"},

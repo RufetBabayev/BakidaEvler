@@ -103,8 +103,10 @@ Python 3, `requests`. Mərhələ 3-dən sonra Supabase, GitHub Actions; mərhəl
 
 ## Mərhələ 6 qeydləri (bildirişlər)
 
-- Expo Go Android-də push bildirişi artıq dəstəkləmir (SDK 53+); real push üçün Firebase + EAS build lazımdır. Sadə yol: **ntfy.sh**. Toplayıcı (`toplayici/notify.py`) yeni **"ev sahibi"** elanı tapanda `https://ntfy.sh`-a JSON göndərir; telefonda "ntfy" tətbiqi gizli mövzuya abunədir. Bildirişə basanda elanın linki açılır.
-- Mövzu adı `NTFY_TOPIC` GitHub Secret-dədir (repoya YAZMA; ictimai repoda mövzu adı bilinsə, kimsə abunə ola/spam göndərə bilər). Yoxdursa bildiriş göndərilmir.
-- Qaydalar: yalnız `makler_nəticə == "ev sahibi"`, yerləşdirmə tarixi (varsa) 24 saatdan köhnə deyil, bazaya uğurla yazılıb. Bir işləmədə 5-dən çox olarsa bir ümumi bildiriş.
-- Tətbiq `AppState` "active" olanda (önə çıxanda) siyahını avtomatik yeniləyir.
-- Workflow dəyişikliyi (məs. yeni env) işləyən zəncirə təsir etmir: zənciri Cancel edib yenidən "Run workflow" etmək lazımdır.
+- Real push: tətbiq girişdən sonra bildiriş icazəsi istəyir (Android 13+ pəncərəsi), Expo push tokenini `push_tokenlar` cədvəlinə yazır (`tetbiq/src/push.ts`). Toplayıcı (`toplayici/notify.py`) yeni **"ev sahibi"** elanı tapanda bütün tokenlərə https://exp.host/--/api/v2/push/send ilə göndərir (FCM üzərindən). Bildiriş tətbiqin quraşdırılmış (APK) versiyasında işləyir, Expo Go-da yox.
+- Qaydalar: yalnız `makler_nəticə == "ev sahibi"`, yerləşdirmə tarixi (varsa) 24 saatdan köhnə deyil, bazaya uğurla yazılıb. Bir işləmədə 5-dən çox olarsa bir ümumi bildiriş. `DeviceNotRegistered` tokenlər silinir.
+- FCM qurulumu (bir dəfəlik, sahibi edir): Firebase layihəsi, Android tətbiqi `az.bakidaevler`, `google-services.json` -> `tetbiq/` + `app.json` `android.googleServicesFile`; Firebase service account açarı (gizli, repoya YAZMA) EAS-ə yüklənir (expo.dev -> Credentials -> FCM V1).
+- 30 günlük təmizlik: hər işləmənin sonunda `db.cleanup(30)` köhnə elanları silir.
+- Tətbiq `AppState` "active" olanda siyahını avtomatik yeniləyir.
+- Workflow dəyişikliyi və yeni kod işləyən zəncirə təsir etmir: zənciri Cancel edib yenidən "Run workflow" etmək lazımdır.
+- Ən son (2026-11-19) ntfy.sh ilə sınaq yolu atıldı (texniki olmayan istifadəçi üçün çətin idi).

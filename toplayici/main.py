@@ -178,6 +178,12 @@ def main():
           f"{int(total // 60)} dəq {int(total % 60)} s", flush=True)
 
     if use_db:
+        try:  # 30 gündən köhnə elanları sil (baza böyüməsin)
+            removed = db.cleanup(30)
+            if removed:
+                print(f"[{NAME}] təmizlik: {removed} köhnə elan (30 gündən köhnə) silindi", flush=True)
+        except Exception as e:
+            print(f"[təmizlik] xəta: {e}", flush=True)
         print("Nəticə Supabase-ə yazıldı." if all_items else "Yeni elan yoxdur.")
         sys.exit(1 if any_error else 0)
     save_seen(seen_all)

@@ -51,3 +51,15 @@ create policy "oxumaq: giriş edən" on elanlar for select to authenticated usin
 -- Mərhələ 5: çoxlu sayt. Satıcı açarı (telefon və ya sayt hesabı) makler aşkarlamaq üçündür.
 alter table elanlar add column if not exists satici_acari text;
 create index if not exists elanlar_satici_acari_idx on elanlar (satici_acari);
+
+-- Mərhələ 6: bildiriş tokenləri. Hər istifadəçi yalnız öz telefonunun tokenini yaza/oxuya bilər; toplayıcı (service_role) hamısını oxuyur.
+create table if not exists push_tokenlar (
+  token     text primary key,
+  user_id   uuid not null default auth.uid(),
+  yenilendi timestamptz not null default now()
+);
+alter table push_tokenlar enable row level security;
+grant select, insert, update, delete on table push_tokenlar to authenticated;
+grant all on table push_tokenlar to service_role;
+drop policy if exists "token: oz" on push_tokenlar;
+create policy "token: oz" on push_tokenlar for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());

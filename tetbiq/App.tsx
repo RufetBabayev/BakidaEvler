@@ -4,6 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import type { Session } from "@supabase/supabase-js";
 import ListScreen from "./src/ListScreen";
 import LoginScreen from "./src/LoginScreen";
+import { registerForPush } from "./src/push";
 import { supabase } from "./src/supabase";
 import { colors } from "./src/theme";
 
@@ -19,6 +20,11 @@ export default function App() {
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  // giriş edildikdən sonra bildiriş icazəsi istə və telefonu qeydiyyatdan keçir
+  useEffect(() => {
+    if (session) registerForPush();
+  }, [session]);
 
   if (!hazir) {
     return <View style={s.center}><ActivityIndicator color={colors.accent} /></View>;

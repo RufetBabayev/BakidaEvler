@@ -1,16 +1,16 @@
-"""Telefona bildiriş (ntfy.sh): yeni EV SAHİBİ elanları gələndə.
+"""Telefona bildiriş: yeni EV SAHİBİ elanı gələndə tətbiqi qurmuş bütün telefonlara (Expo Push + FCM).
 
-ntfy.sh pulsuz push xidmətidir; telefonda "ntfy" tətbiqi qurulur və gizli bir "mövzuya" (topic) abunə olunur.
-Mövzu adı NTFY_TOPIC mühit dəyişənindən (GitHub Secret) oxunur; yoxdursa heç nə göndərilmir.
-Göndərilən məlumat yalnız ictimai elan məlumatıdır (qiymət, otaq, yer, link). Mövzu adı parol rolunu oynayır:
-onu bilməyən abunə ola bilməz, ona görə gizli saxla və repoya yazma.
+Tətbiq girişdən sonra bildiriş icazəsi istəyir və Expo push tokenini Supabase-dəki `push_tokenlar`
+cədvəlinə yazır. Toplayıcı bu tokenləri oxuyub https://exp.host/--/api/v2/push/send ünvanına göndərir.
+Tokensiz (hələ heç kim qurmayıb) və ya Supabase rejimi olmadan heç nə göndərilmir.
 """
-import os
 from datetime import datetime, timedelta, timezone
 
 import requests
 
-NTFY_URL = "https://ntfy.sh"
+import db
+
+EXPO_URL = "https://exp.host/--/api/v2/push/send"
 MAX_SEPARATE = 5      # bir işləmədə bundan çox ev sahibi elanı varsa, bir ümumi bildiriş göndərilir
 MAX_AGE_HOURS = 24    # yerləşdirmə tarixi bundan köhnə olan elanlar haqqında bildiriş göndərilmir (ilk yığım axını)
 
@@ -31,39 +31,59 @@ def _title(it):
         parts.append(f"{it['otaq_sayı']} otaq")
     if it.get("sahə_m2"):
         parts.append(f"{it['sahə_m2']:g} m²")
-    price = it.get("qiymət")
     head = " · ".join(parts) or (it.get("kateqoriya") or "Ev")
-    if price:
-        head += f" — {int(price):,} {it.get('valyuta') or 'AZN'}".replace(",", " ")
+    if it.get("qiymət"):
+        head += f" — {int(it['qiymət']):,} {it.get('valyuta') or 'AZN'}".replace(",", " ")
     return "Ev sahibi: " + head
 
 
-def _post(payload):
-    try:
-        r = requests.post(NTFY_URL, json=payload, timeout=(10, 20))
-        return r.ok
-    except requests.RequestException as e:
-        print(f"[bildiriş] göndərilmədi: {e}", flush=True)
-        return False
+def _messages(owners):
+    """Bildiriş mətnlərinin siyahısı (token əlavə olunmamış)."""
+    if len(owners) > MAX_SEPARATE:
+        return [{"title": f"{len(owners)} yeni ev sahibi elanı", "body": "Tətbiqi açıb baxın."}]
+    out = []
+    for it in owners:
+        place = " · ".join(x for x in [it.get("rayon"), it.get("metro")] if x)
+        out.append({"title": _title(it), "body": " | ".join(x for x in [place, it.get("mənbə")] if x) or "Yeni elan",
+                    "data": {"url": it.get("link")}})
+    return out
 
 
-def send_new_owner_ads(items, topic=None):
+def _send(tokens, messages):
+    """Hər mesajı hər tokenə göndərir (100-lük partiyalarla). Qeydiyyatsız tokenləri bazadan silir. Göndərilən sayı qaytarır."""
+    batch, sent, dead = [], 0, set()
+    for msg in messages:
+        for t in tokens:
+            batch.append({"to": t, "sound": "default", "channelId": "default", "priority": "high", **msg})
+    for i in range(0, len(batch), 100):
+        chunk = batch[i:i + 100]
+        try:
+            r = requests.post(EXPO_URL, json=chunk, timeout=(10, 30),
+                              headers={"Accept": "application/json", "Content-Type": "application/json"})
+            r.raise_for_status()
+            for m, ticket in zip(chunk, r.json().get("data", [])):
+                if ticket.get("status") == "ok":
+                    sent += 1
+                elif (ticket.get("details") or {}).get("error") == "DeviceNotRegistered":
+                    dead.add(m["to"])
+        except (requests.RequestException, ValueError) as e:
+            print(f"[bildiriş] göndərilmədi: {e}", flush=True)
+    for t in dead:
+        try:
+            db.delete_token(t)
+        except Exception:
+            pass
+    return sent
+
+
+def send_new_owner_ads(items):
     """items: bu işləmədə tapılan YENİ elanlar. Yalnız 'ev sahibi' olanlar göndərilir. Göndərilən sayı qaytarır."""
-    topic = topic or os.environ.get("NTFY_TOPIC")
-    if not topic:
+    if not db.enabled():
         return 0
     owners = [i for i in items if i.get("yeni") and i.get("makler_nəticə") == "ev sahibi" and _fresh(i)]
     if not owners:
         return 0
-    if len(owners) > MAX_SEPARATE:
-        ok = _post({"topic": topic, "title": f"{len(owners)} yeni ev sahibi elanı",
-                    "message": "Tətbiqi açıb baxın.", "tags": ["house"], "priority": 3})
-        return len(owners) if ok else 0
-    sent = 0
-    for it in owners:
-        place = " · ".join(x for x in [it.get("rayon"), it.get("metro")] if x)
-        msg = " | ".join(x for x in [place, it.get("mənbə")] if x)
-        ok = _post({"topic": topic, "title": _title(it), "message": msg or (it.get("mənbə") or ""),
-                    "click": it.get("link"), "tags": ["house"], "priority": 3})
-        sent += 1 if ok else 0
-    return sent
+    tokens = db.fetch_tokens()
+    if not tokens:
+        return 0
+    return _send(tokens, _messages(owners))
