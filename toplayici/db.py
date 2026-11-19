@@ -23,7 +23,9 @@ def _base():
 
 def _headers(extra=None):
     key = os.environ["SUPABASE_SERVICE_KEY"]
-    h = {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+    h = {"apikey": key, "Content-Type": "application/json"}
+    if key.startswith("eyJ"):  # köhnə JWT açarı; yeni sb_secret_... açarı yalnız apikey başlığı ilə işləyir
+        h["Authorization"] = f"Bearer {key}"
     h.update(extra or {})
     return h
 
