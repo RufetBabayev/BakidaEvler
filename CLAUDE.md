@@ -23,7 +23,7 @@ BakidaEvler/
 
 1. **bina.az toplayıcısı** — BİTDİ (bax: aşağıdakı qeydlər)
 2. Makler aşkarlama (eyni telefonla çoxlu elan) — BİRİNCİ VERSİYA HAZIRDIR (`toplayici/makler.py`)
-3. Supabase bazası + GitHub Actions ilə avtomatik işləmə — KOD HAZIRDIR, işə salınma yoxlanılır (bax: Mərhələ 3 qeydləri)
+3. Supabase bazası + GitHub Actions ilə avtomatik işləmə — BİTDİ (ilk əl ilə işləmə 2026-11-19: 75 elan bazaya yazıldı, 4m18s)
 4. Expo (React Native) tətbiqi — `tetbiq/`
 5. Digər saytlar: tap.az, yeniemlak.az, emlak.az, vipemlak.az, rahatemlak.az, domik.az, korter.az
 6. Push bildirişlər
