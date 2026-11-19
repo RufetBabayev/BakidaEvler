@@ -1,0 +1,43 @@
+-- BakıdaEvlər.az: Supabase cədvəlləri.
+-- Supabase panelində: SQL Editor -> New query -> bunu yapışdırın -> Run.
+
+create table if not exists elanlar (
+  menba            text        not null,           -- məsələn 'bina.az'
+  elan_id          text        not null,
+  link             text,
+  qiymet           numeric,
+  valyuta          text,
+  kateqoriya       text,
+  otaq_sayi        int,
+  sahe_m2          numeric,
+  rayon            text,
+  metro            text,
+  satici_tipi      text,                            -- 'mülkiyyətçi' / 'vasitəçi'
+  satici_adi       text,
+  telefon          text,
+  telefon_elan_sayi int,
+  makler_netice    text,                            -- 'ev sahibi' / 'makler' / 'şübhəli makler'
+  yenilenme_tarixi timestamptz,
+  ilk_gorulme      timestamptz not null default now(),
+  data             jsonb       not null,            -- elanın tam qeydi (təsvir, şəkillər və s.)
+  primary key (menba, elan_id)
+);
+
+create index if not exists elanlar_ilk_gorulme_idx on elanlar (ilk_gorulme desc);
+create index if not exists elanlar_telefon_idx on elanlar (telefon);
+
+create table if not exists toplayici_veziyyet (
+  menba        text primary key,
+  son_max_id   bigint,
+  gozleyen     jsonb not null default '[]'::jsonb,
+  yenilendi    timestamptz not null default now()
+);
+
+-- Bu cədvəllərə yalnız toplayıcı (service_role açarı ilə) yazır.
+-- RLS açıq qalır, heç bir siyasət (policy) yoxdur: anonim açar heç nə oxuya bilməz.
+-- Tətbiq mərhələsində (4) oxumaq üçün ayrıca siyasət əlavə edəcəyik.
+alter table elanlar enable row level security;
+alter table toplayici_veziyyet enable row level security;
+
+-- Layihə "yeni cədvəllərə API girişi avtomatik ver" seçimi olmadan yaradılıbsa, toplayıcı üçün icazə lazımdır:
+grant all on table elanlar, toplayici_veziyyet to service_role;

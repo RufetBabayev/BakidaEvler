@@ -1,0 +1,30 @@
+name: toplayici
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"   # hər 15 dəqiqədən bir (GitHub bəzən bir neçə dəqiqə gecikdirir)
+  workflow_dispatch: {}       # əl ilə işə salmaq üçün
+
+concurrency:
+  group: toplayici
+  cancel-in-progress: false
+
+jobs:
+  topla:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: toplayici
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: toplayici/requirements.txt
+      - run: pip install -r requirements.txt
+      - run: python main.py
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}

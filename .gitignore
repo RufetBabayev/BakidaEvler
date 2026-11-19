@@ -1,0 +1,8 @@
+# yerli məlumat və gizli açarlar repoya düşməsin
+toplayici/data/
+toplayici/seen.json
+.env
+*.env
+__pycache__/
+*.pyc
+tetbiq/node_modules/
