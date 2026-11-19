@@ -16,6 +16,7 @@ from pathlib import Path
 
 import db
 import makler
+import notify
 from scrapers import bina, domik, rahatemlak, tap, vipemlak, yeniemlak
 
 # Yeni sayt əlavə etmək: scrapers/<sayt>.py yaz və bura əlavə et.
@@ -130,7 +131,7 @@ def main():
                 }
     sayac = makler.say(seen_all)
 
-    all_items, any_error = [], False
+    all_items, any_error, notify_items = [], False, []
     ok_sites, total_new = 0, 0
     for sc in scrapers:
         items, errors = results[sc.SOURCE]
@@ -163,8 +164,16 @@ def main():
         any_error = any_error or bool([e for e in errors if not e.startswith(("BLOKLANDI", "VAXT BİTDİ"))])
         total_new += len(new)
         all_items.extend(items)
+        if not any(e.startswith("bazaya yazma xətası") for e in errors):
+            notify_items.extend(new)  # yalnız bazaya yazılanlar haqqında bildiriş
 
     total = time.monotonic() - t_all
+    try:
+        sent = notify.send_new_owner_ads(notify_items)
+        if sent:
+            print(f"[{NAME}] bildiriş: {sent} ev sahibi elanı göndərildi", flush=True)
+    except Exception as e:  # bildiriş xətası toplamağı pozmasın
+        print(f"[bildiriş] xəta: {e}", flush=True)
     print(f"[{NAME}] CƏMİ: {ok_sites}/{len(scrapers)} sayt uğurlu | {total_new} yeni elan | "
           f"{int(total // 60)} dəq {int(total % 60)} s", flush=True)
 

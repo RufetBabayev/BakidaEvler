@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator, FlatList, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, AppState, FlatList, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View,
 } from "react-native";
 import { supabase } from "./supabase";
 import { colors } from "./theme";
@@ -98,6 +98,14 @@ export default function ListScreen() {
       setRayonlar([...set].sort((a, b) => a.localeCompare(b, "az")));
     });
   }, []);
+
+  // tətbiqə hər qayıdanda (fonda idi, indi önə çıxdı) siyahı avtomatik yenilənir: bildirişə basıb girəndə də
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") yukle(filtr, 0);
+    });
+    return () => sub.remove();
+  }, [filtr, yukle]);
 
   async function yenile() {
     setYenilenir(true);

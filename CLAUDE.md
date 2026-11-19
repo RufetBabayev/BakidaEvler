@@ -26,7 +26,7 @@ BakidaEvler/
 3. Supabase bazası + GitHub Actions ilə avtomatik işləmə — BİTDİ (ilk əl ilə işləmə 2026-11-19: 75 elan bazaya yazıldı, 4m18s)
 4. Expo (React Native) tətbiqi — `tetbiq/` — İLK VERSİYA YAZILDI (giriş + siyahı + filtrlər), telefonda sınanmayıb
 5. Digər saytlar: tap.az, yeniemlak.az, emlak.az, vipemlak.az, rahatemlak.az, domik.az, korter.az
-6. Push bildirişlər
+6. Push bildirişlər — ntfy.sh ilə HAZIRDIR (bax: Mərhələ 6 qeydləri)
 
 ## Texnologiyalar
 
@@ -100,3 +100,11 @@ Python 3, `requests`. Mərhələ 3-dən sonra Supabase, GitHub Actions; mərhəl
 - Həll: `.github/workflows/toplayici.yml` bir işləmədə ~5 saat 40 dəq ərzində hər 15 dəqiqədən bir `python -u main.py` çağırır, sonda `gh workflow run` ilə növbəti işləməni özü başladır (GITHUB_TOKEN-in `workflow_dispatch` etməsinə icazə var, `permissions: actions: write`). `concurrency` işləmələrin üst-üstə düşməsinin qarşısını alır. `schedule` ehtiyat kimi qalır.
 - Zənciri dayandırmaq: Actions-da işləyən "toplayici"-ni Cancel et (Cancel zamanı növbəti işləmə başlamır). Yenidən başlatmaq: "Run workflow".
 - Risk: zəncir qırılsa (GitHub nasazlığı, əl ilə cancel), yeni elan yığılmır; təkrar "Run workflow" lazımdır. Zəncir qırılması üçün xəbərdarlıq hələ yoxdur.
+
+## Mərhələ 6 qeydləri (bildirişlər)
+
+- Expo Go Android-də push bildirişi artıq dəstəkləmir (SDK 53+); real push üçün Firebase + EAS build lazımdır. Sadə yol: **ntfy.sh**. Toplayıcı (`toplayici/notify.py`) yeni **"ev sahibi"** elanı tapanda `https://ntfy.sh`-a JSON göndərir; telefonda "ntfy" tətbiqi gizli mövzuya abunədir. Bildirişə basanda elanın linki açılır.
+- Mövzu adı `NTFY_TOPIC` GitHub Secret-dədir (repoya YAZMA; ictimai repoda mövzu adı bilinsə, kimsə abunə ola/spam göndərə bilər). Yoxdursa bildiriş göndərilmir.
+- Qaydalar: yalnız `makler_nəticə == "ev sahibi"`, yerləşdirmə tarixi (varsa) 24 saatdan köhnə deyil, bazaya uğurla yazılıb. Bir işləmədə 5-dən çox olarsa bir ümumi bildiriş.
+- Tətbiq `AppState` "active" olanda (önə çıxanda) siyahını avtomatik yeniləyir.
+- Workflow dəyişikliyi (məs. yeni env) işləyən zəncirə təsir etmir: zənciri Cancel edib yenidən "Run workflow" etmək lazımdır.
